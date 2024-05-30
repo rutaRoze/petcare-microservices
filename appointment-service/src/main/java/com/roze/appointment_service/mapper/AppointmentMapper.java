@@ -3,9 +3,10 @@ package com.roze.appointment_service.mapper;
 import com.roze.appointment_service.dto.request.AppointmentRequest;
 import com.roze.appointment_service.dto.response.AppointmentResponse;
 import com.roze.appointment_service.dto.response.UserResponse;
+import com.roze.appointment_service.exception.NotFoundException;
 import com.roze.appointment_service.feign.UserClient;
 import com.roze.appointment_service.persistance.model.AppointmentEntity;
-import jakarta.persistence.EntityNotFoundException;
+import feign.FeignException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -17,15 +18,8 @@ public class AppointmentMapper {
 
     public AppointmentEntity requestToEntity(AppointmentRequest appointmentRequest) {
 
-        UserResponse ownerResponse = userClient.getUserById(appointmentRequest.getOwnerId());
-        if (ownerResponse == null) {
-            throw new EntityNotFoundException("User not found by id: " + appointmentRequest.getOwnerId());
-        }
-
-        UserResponse vetResponse = userClient.getUserById(appointmentRequest.getVetId());
-        if (vetResponse == null) {
-            throw new EntityNotFoundException("User not found by id: " + appointmentRequest.getOwnerId());
-        }
+        UserResponse ownerResponse = getUserByIdOrThrow(appointmentRequest.getOwnerId());
+        UserResponse vetResponse = getUserByIdOrThrow(appointmentRequest.getVetId());
 
         return AppointmentEntity.builder()
                 .ownerId(ownerResponse.getId())
@@ -37,15 +31,8 @@ public class AppointmentMapper {
 
     public AppointmentResponse entityToResponse(AppointmentEntity appointmentEntity) {
 
-        UserResponse ownerResponse = userClient.getUserById(appointmentEntity.getOwnerId());
-        if (ownerResponse == null) {
-            throw new EntityNotFoundException("User not found by id: " + appointmentEntity.getOwnerId());
-        }
-
-        UserResponse vetResponse = userClient.getUserById(appointmentEntity.getVetId());
-        if (vetResponse == null) {
-            throw new EntityNotFoundException("User not found by id: " + appointmentEntity.getOwnerId());
-        }
+        UserResponse ownerResponse = getUserByIdOrThrow(appointmentEntity.getOwnerId());
+        UserResponse vetResponse = getUserByIdOrThrow(appointmentEntity.getVetId());
 
         return AppointmentResponse.builder()
                 .appointmentId(appointmentEntity.getAppointmentId())
@@ -56,5 +43,13 @@ public class AppointmentMapper {
                 .appointmentDateTime(appointmentEntity.getAppointmentDateTime())
                 .reason(appointmentEntity.getReason())
                 .build();
+    }
+
+    private UserResponse getUserByIdOrThrow(Long userId) {
+        try {
+            return userClient.getUserById(userId);
+        } catch (FeignException.NotFound e) {
+            throw new NotFoundException("User not found with id: " + userId);
+        }
     }
 }

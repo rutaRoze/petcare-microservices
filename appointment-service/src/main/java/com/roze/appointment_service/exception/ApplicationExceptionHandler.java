@@ -34,6 +34,11 @@ public class ApplicationExceptionHandler {
         return buildResponse(ex.getMessage(), HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<Object> handle(NotFoundException ex) {
+        return buildResponse(ex.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
     @ExceptionHandler(NoChangesMadeException.class)
     public ResponseEntity<Object> handle(NoChangesMadeException ex) {
         return buildResponse(ex.getMessage(), HttpStatus.CONFLICT);
