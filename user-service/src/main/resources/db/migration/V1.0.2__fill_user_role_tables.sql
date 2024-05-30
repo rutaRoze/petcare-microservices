@@ -12,8 +12,8 @@ VALUES
 
 INSERT INTO roles (name)
 VALUES
-    ('Vet'),
-    ('Owner');
+    ('VET'),
+    ('OWNER');
 
 INSERT INTO user_roles (user_id, role_id)
 VALUES
