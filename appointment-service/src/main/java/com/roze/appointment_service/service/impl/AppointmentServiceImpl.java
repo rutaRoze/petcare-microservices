@@ -35,9 +35,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         AppointmentEntity appointmentToSave = appointmentMapper.requestToEntity(appointmentRequest);
 
-        if (doesAppointmentAlreadyExists(appointmentToSave)) {
-            throw new AppointmentExistsException("Appointment for given veterinarian, date and time already exists");
-        }
+        checkDoesAppointmentForVetAlreadyExists(appointmentToSave);
 
         AppointmentEntity savedAppointment = appointmentRepository.save(appointmentToSave);
 
@@ -47,7 +45,6 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     public AppointmentResponse findAppointmentById(Long id) {
         AppointmentEntity appointmentEntity = getAppointmentByIdOrThrow(id);
-
         UserResponse ownerResponse = getUserByIdOrThrow(appointmentEntity.getOwnerId());
         UserResponse vetResponse = getUserByIdOrThrow(appointmentEntity.getVetId());
 
@@ -58,18 +55,14 @@ public class AppointmentServiceImpl implements AppointmentService {
     public AppointmentResponse updateAppointmentById(Long id, AppointmentRequest appointmentRequest) {
         AppointmentEntity existingAppointment = getAppointmentByIdOrThrow(id);
 
-        if (isAppointmentEqual(existingAppointment, appointmentRequest)) {
-            throw new NoChangesMadeException("Appointment object was not updated as no changes of object were made.");
-        }
+        checkIsAppointmentRequestHasAnyUpdates(existingAppointment, appointmentRequest);
 
         AppointmentEntity appointmentToUpdate = appointmentMapper.requestToEntity(appointmentRequest);
 
         UserResponse ownerResponse = getUserByIdOrThrow(appointmentToUpdate.getOwnerId());
         UserResponse vetResponse = getUserByIdOrThrow(appointmentToUpdate.getVetId());
 
-        if (doesAppointmentAlreadyExists(appointmentToUpdate)) {
-            throw new AppointmentExistsException("Appointment for given veterinarian, date and time already exists");
-        }
+        checkDoesAppointmentForVetAlreadyExists(appointmentToUpdate);
 
         existingAppointment.setOwnerId(appointmentToUpdate.getOwnerId());
         existingAppointment.setVetId(appointmentToUpdate.getVetId());
@@ -92,18 +85,27 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .orElseThrow(() -> new EntityNotFoundException("Appointment object not found for the given ID: " + appointmentId));
     }
 
-    private boolean isAppointmentEqual(AppointmentEntity existingAppointment, AppointmentRequest appointmentRequest) {
-        return existingAppointment.getOwnerId().equals(appointmentRequest.getOwnerId()) &&
+    private void checkIsAppointmentRequestHasAnyUpdates(AppointmentEntity existingAppointment, AppointmentRequest appointmentRequest) {
+        boolean isAppointmentsAreEqual = existingAppointment.getOwnerId().equals(appointmentRequest.getOwnerId()) &&
                 existingAppointment.getVetId().equals(appointmentRequest.getVetId()) &&
                 existingAppointment.getAppointmentDateTime().equals(appointmentRequest.getAppointmentDateTime()) &&
                 existingAppointment.getReason().equals(appointmentRequest.getReason());
+
+        if (isAppointmentsAreEqual) {
+            throw new NoChangesMadeException("Appointment object was not updated as no changes of object were made.");
+        }
     }
 
-    private boolean doesAppointmentAlreadyExists(AppointmentEntity appointmentToSave) {
-        return appointmentRepository.existsByVetIdAndAppointmentDateTime(
+    private void checkDoesAppointmentForVetAlreadyExists(AppointmentEntity appointmentToSave) {
+
+        boolean vetAppointmentExists = appointmentRepository.existsByVetIdAndAppointmentDateTime(
                 appointmentToSave.getVetId(),
                 appointmentToSave.getAppointmentDateTime()
         );
+
+         if (vetAppointmentExists) {
+            throw new AppointmentExistsException("Appointment for given veterinarian, date and time already exists");
+        }
     }
 
     private UserResponse getUserByIdOrThrow(Long userId) {
