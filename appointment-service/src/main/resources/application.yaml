@@ -1,18 +1,32 @@
 spring:
   application:
     name: appointment-service
+
   datasource:
     url: jdbc:mysql://localhost:3306/petcareappointmentdb
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   flyway:
     locations: classpath:db/migration
     enabled: true
+
   jpa:
     show-sql: true
     hibernate:
       ddl-auto: update
 
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+#      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+#      properties:
+#        spring:
+#          json:
+#            trusted:
+#              packages: "com.roze.appointment_service.dto.event"
 server:
   port: 8081
