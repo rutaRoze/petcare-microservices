@@ -48,11 +48,10 @@ public class AppointmentServiceImpl implements AppointmentService {
         AppointmentResponse response = appointmentMapper.entityToResponse(savedAppointment, ownerResponse, vetResponse);
 
         AppointmentEvent event = AppointmentEvent.builder()
-                .eventType(EventType.CREATED)
-                .appointmentResponse(response)
+                .eventType("EventType.CREATED")
                 .build();
 
-        kafkaEventProducer.sendEventToKafkaServer(EventType.CREATED.toString());
+        kafkaEventProducer.sendEventToKafkaServer(event);
 
         return response;
     }
@@ -89,11 +88,10 @@ public class AppointmentServiceImpl implements AppointmentService {
         AppointmentResponse response = appointmentMapper.entityToResponse(updatedAppointment, ownerResponse, vetResponse);
 
         AppointmentEvent event = AppointmentEvent.builder()
-                .eventType(EventType.UPDATED)
-                .appointmentResponse(response)
+                .eventType("EventType.UPDATED")
                 .build();
 
-        kafkaEventProducer.sendEventToKafkaServer(EventType.UPDATED.toString());
+        kafkaEventProducer.sendEventToKafkaServer(event);
 
         return response;
     }
@@ -106,11 +104,10 @@ public class AppointmentServiceImpl implements AppointmentService {
         AppointmentResponse response = appointmentMapper.entityToResponse(appointmentToDelete, ownerResponse, vetResponse);
 
         AppointmentEvent event = AppointmentEvent.builder()
-                .eventType(EventType.CANCELED)
-                .appointmentResponse(response)
+                .eventType("EventType.DELETED")
                 .build();
 
-        kafkaEventProducer.sendEventToKafkaServer(EventType.CANCELED.toString());
+        kafkaEventProducer.sendEventToKafkaServer(event);
 
         appointmentRepository.deleteById(id);
     }

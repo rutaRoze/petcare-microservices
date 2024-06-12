@@ -16,16 +16,16 @@ import org.springframework.stereotype.Service;
 public class KafkaAppointmentEventProducer {
 
     @Autowired
-    private KafkaTemplate<String, String> kafkaTemplate;
+    private KafkaTemplate<String, Object> kafkaTemplate;
 
-    public void sendEventToKafkaServer(String event) {
+    public void sendEventToKafkaServer(Object event) {
 
-//        Message<String> message = MessageBuilder
-//                .withPayload(event)
-//                .setHeader(KafkaHeaders.TOPIC, "appointment-events")
-//                .build();
+        Message<Object> message = MessageBuilder
+                .withPayload(event)
+                .setHeader(KafkaHeaders.TOPIC, "appointment-events")
+                .build();
 
-        log.info("Sending event to Kafka server: {}", event);
-        kafkaTemplate.send("appointment-events", event);
+        log.info("Sending event to Kafka server: {}", message);
+        kafkaTemplate.send(message);
     }
 }
