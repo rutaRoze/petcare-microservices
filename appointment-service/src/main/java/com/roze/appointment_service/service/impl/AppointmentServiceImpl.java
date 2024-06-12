@@ -48,7 +48,8 @@ public class AppointmentServiceImpl implements AppointmentService {
         AppointmentResponse response = appointmentMapper.entityToResponse(savedAppointment, ownerResponse, vetResponse);
 
         AppointmentEvent event = AppointmentEvent.builder()
-                .eventType("EventType.CREATED")
+                .eventType(EventType.CREATED)
+                .appointmentResponse(response)
                 .build();
 
         kafkaEventProducer.sendEventToKafkaServer(event);
@@ -88,7 +89,8 @@ public class AppointmentServiceImpl implements AppointmentService {
         AppointmentResponse response = appointmentMapper.entityToResponse(updatedAppointment, ownerResponse, vetResponse);
 
         AppointmentEvent event = AppointmentEvent.builder()
-                .eventType("EventType.UPDATED")
+                .eventType(EventType.UPDATED)
+                .appointmentResponse(response)
                 .build();
 
         kafkaEventProducer.sendEventToKafkaServer(event);
@@ -104,7 +106,8 @@ public class AppointmentServiceImpl implements AppointmentService {
         AppointmentResponse response = appointmentMapper.entityToResponse(appointmentToDelete, ownerResponse, vetResponse);
 
         AppointmentEvent event = AppointmentEvent.builder()
-                .eventType("EventType.DELETED")
+                .eventType(EventType.CANCELED)
+                .appointmentResponse(response)
                 .build();
 
         kafkaEventProducer.sendEventToKafkaServer(event);

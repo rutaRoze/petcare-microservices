@@ -12,6 +12,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AppointmentEvent {
-    private String eventType;
-//    private AppointmentResponse appointmentResponse;
+    private EventType eventType;
+    private AppointmentResponse appointmentResponse;
 }
