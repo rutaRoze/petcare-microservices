@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.util.Set;
+import java.util.List;
 
 @Getter
 @Builder
@@ -18,5 +18,5 @@ public class UserResponse {
     private String surname;
     private String email;
     private String phoneNumber;
-    private Set<RoleName> roleNames;
+    private List<RoleName> roleNames;
 }

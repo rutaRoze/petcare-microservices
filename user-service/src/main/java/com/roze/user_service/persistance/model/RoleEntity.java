@@ -16,8 +16,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -38,11 +38,11 @@ public class RoleEntity {
     private RoleName name;
 
     @ManyToMany(mappedBy = "roles")
-    private Set<UserEntity> users = new HashSet<>();
+    private List<UserEntity> users;
 
     public void addUser(UserEntity userEntity) {
         if (users == null) {
-            users = new HashSet<>();
+            users = new ArrayList<>();
         }
 
         users.add(userEntity);
