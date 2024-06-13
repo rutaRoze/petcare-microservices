@@ -52,10 +52,10 @@ public class AppointmentController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteAppointmentById(
+    public ResponseEntity<String> deleteAppointmentById(
             @Min(1) @PathVariable Long id) {
         appointmentService.deleteAppointmentById(id);
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(String.format("Appointment entry by ID %d was successfully deleted from data base", id));
     }
 }
