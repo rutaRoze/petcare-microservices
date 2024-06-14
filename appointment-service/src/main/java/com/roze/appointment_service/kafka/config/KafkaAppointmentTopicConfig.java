@@ -14,4 +14,11 @@ public class KafkaAppointmentTopicConfig {
                 .name("appointment-events")
                 .build();
     }
+
+    @Bean
+    public  NewTopic auditTopic() {
+        return TopicBuilder
+                .name("audit-events")
+                .build();
+    }
 }
