@@ -20,8 +20,7 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.sql.Timestamp;
-import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
 import java.util.Locale;
 
 @Service
@@ -52,7 +51,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         AppointmentResponse response = appointmentMapper.entityToResponse(savedAppointment, ownerResponse, vetResponse);
 
-        kafkaEventProducer.sendEventToKafkaServer(createAuditEvent(EventType.CREATED, savedAppointment, savedAppointment));
+        kafkaEventProducer.sendEventToKafkaServer(createAuditEvent(EventType.CREATED, null, savedAppointment));
         kafkaEventProducer.sendEventToKafkaServer(createAppointmentEvent(EventType.CREATED, response));
 
         return response;
@@ -70,6 +69,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     public AppointmentResponse updateAppointmentById(Long id, AppointmentRequest appointmentRequest) {
         AppointmentEntity existingAppointment = getAppointmentByIdOrThrow(id);
+        String existingAppointmentForAuditEntry = existingAppointment.toString();
 
         checkIsAppointmentRequestHasAnyUpdates(existingAppointment, appointmentRequest);
 
@@ -89,7 +89,9 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         AppointmentResponse response = appointmentMapper.entityToResponse(updatedAppointment, ownerResponse, vetResponse);
 
-        kafkaEventProducer.sendEventToKafkaServer(createAuditEvent(EventType.UPDATED, appointmentToUpdate, updatedAppointment));
+        kafkaEventProducer.sendEventToKafkaServer(createAuditEvent(EventType.UPDATED,
+                existingAppointmentForAuditEntry,
+                updatedAppointment));
         kafkaEventProducer.sendEventToKafkaServer(createAppointmentEvent(EventType.UPDATED, response));
 
         return response;
@@ -102,7 +104,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         UserResponse vetResponse = getUserByIdOrThrow(appointmentToDelete.getVetId());
         AppointmentResponse response = appointmentMapper.entityToResponse(appointmentToDelete, ownerResponse, vetResponse);
 
-        kafkaEventProducer.sendEventToKafkaServer(createAuditEvent(EventType.CANCELED, appointmentToDelete, appointmentToDelete));
+        kafkaEventProducer.sendEventToKafkaServer(createAuditEvent(EventType.CANCELED, null, appointmentToDelete));
         kafkaEventProducer.sendEventToKafkaServer(createAppointmentEvent(EventType.CANCELED, response));
 
         appointmentRepository.deleteById(id);
@@ -152,82 +154,37 @@ public class AppointmentServiceImpl implements AppointmentService {
     }
 
     private AuditEvent createAuditEvent(EventType eventType,
-                                        AppointmentEntity appointmentToUpdate,
+                                        String existingAppointment,
                                         AppointmentEntity updatedAppointment) {
         return AuditEvent.builder()
                 .serviceName("Appointment-service")
                 .eventType(String.format("Appointment %s", eventType.toString()))
-                .initiatorUserId(appointmentToUpdate.getVetId())
-                .message(buildAuditEventMessage(eventType, appointmentToUpdate, updatedAppointment))
-                .timestamp(new Timestamp(System.currentTimeMillis()))
+                .initiatorUserId(updatedAppointment.getVetId())
+                .message(buildAuditEventMessage(eventType, existingAppointment, updatedAppointment))
+                .createdAt(LocalDateTime.now())
                 .build();
     }
 
     private String buildAuditEventMessage(EventType eventType,
-                                          AppointmentEntity appointmentToUpdate,
+                                          String existingAppointment,
                                           AppointmentEntity updatedAppointment) {
         StringBuilder message = new StringBuilder();
         message.append(String.format("Appointment with Id %d was %s: ",
-                appointmentToUpdate.getAppointmentId(),
+                updatedAppointment.getAppointmentId(),
                 eventType.toString().toLowerCase(Locale.ROOT)));
 
         switch (eventType) {
             case UPDATED -> {
-                String changes = getUpdateChanges(appointmentToUpdate, updatedAppointment);
-                message.append(" from ");
-                message.append(changes);
+                message.append(String.format("FROM %s TO %s",
+                        existingAppointment,
+                        updatedAppointment));
             }
             case CREATED, CANCELED -> {
-                String value = getCreateAndCancelMessage(updatedAppointment);
-                message.append(value);
+                message.append(String.format(updatedAppointment.toString()));
             }
             default -> throw new IllegalArgumentException("Unsupported event type");
         }
 
         return message.toString();
-    }
-
-    private String getUpdateChanges(AppointmentEntity oldAppointment, AppointmentEntity newAppointment) {
-        StringBuilder changes = new StringBuilder();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-        if (!oldAppointment.getOwnerId().equals(newAppointment.getOwnerId())) {
-            changes.append(String.format("ownerId: %d to ownerId: %d", oldAppointment.getOwnerId(), newAppointment.getOwnerId()));
-        }
-
-        if (!oldAppointment.getVetId().equals(newAppointment.getVetId())) {
-            if (!changes.isEmpty()) {
-                changes.append(", ");
-            }
-            changes.append(String.format("vetId: %d to vetId: %d", oldAppointment.getVetId(), newAppointment.getVetId()));
-        }
-
-        if (!oldAppointment.getAppointmentDateTime().equals(newAppointment.getAppointmentDateTime())) {
-            if (!changes.isEmpty()) {
-                changes.append(", ");
-            }
-            changes.append(String.format("appointmentDateTime: %s to appointmentDateTime: %s",
-                    oldAppointment.getAppointmentDateTime().format(formatter),
-                    newAppointment.getAppointmentDateTime().format(formatter)));
-        }
-
-        if (!oldAppointment.getReason().equals(newAppointment.getReason())) {
-            if (!changes.isEmpty()) {
-                changes.append(", ");
-            }
-            changes.append(String.format("reason: %s to reason: %s", oldAppointment.getReason(), newAppointment.getReason()));
-        }
-
-        return changes.toString();
-    }
-
-    private String getCreateAndCancelMessage(AppointmentEntity appointmentEntity) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-        return String.format("ownerId: %d, vetId: %d, appointmentDateTime: %s, reason: %s",
-                appointmentEntity.getOwnerId(),
-                appointmentEntity.getVetId(),
-                appointmentEntity.getAppointmentDateTime().format(formatter),
-                appointmentEntity.getReason());
     }
 }

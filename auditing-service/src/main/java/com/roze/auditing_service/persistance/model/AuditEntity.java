@@ -8,15 +8,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -38,9 +35,9 @@ public class AuditEntity {
     @Column(name = "initiator_user_id")
     private Long initiatorUserId;
 
-    @Column(name = "message", nullable = false)
+    @Column(name = "message", length = 2000, nullable = false)
     private String message;
 
-    @Column(name = "time_stamp", nullable = false)
-    private Timestamp timestamp;
+    @Column(name = "cratedAt", nullable = false)
+    private LocalDateTime createdAt;
 }

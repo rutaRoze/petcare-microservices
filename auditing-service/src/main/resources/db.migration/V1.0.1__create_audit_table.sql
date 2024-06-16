@@ -8,5 +8,5 @@ CREATE TABLE appointments (
     event_type VARCHAR NOT NULL,
     initiator_user_id BIGINT,
     message VARCHAR(2000) NOT NULL
-    event_timestamp TIMESTAMP NOT NULL,
+    created_at DATETIME NOT NULL,
 );
