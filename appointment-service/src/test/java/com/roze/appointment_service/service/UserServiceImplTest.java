@@ -22,8 +22,8 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -92,7 +92,7 @@ class UserServiceImplTest {
                 .surname("Doe")
                 .email("john@doe.com")
                 .phoneNumber("1234567890")
-                .roleNames(Set.of(RoleName.OWNER))
+                .roleNames(List.of(RoleName.OWNER))
                 .build();
     }
 
@@ -103,7 +103,7 @@ class UserServiceImplTest {
                 .surname("Din")
                 .email("jinn@din.com")
                 .phoneNumber("1234567890")
-                .roleNames(Set.of(RoleName.VET))
+                .roleNames(List.of(RoleName.VET))
                 .build();
     }
 
