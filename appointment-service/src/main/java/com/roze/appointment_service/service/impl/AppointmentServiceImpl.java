@@ -1,7 +1,5 @@
 package com.roze.appointment_service.service.impl;
 
-import com.roze.appointment_service.dto.event.AppointmentEvent;
-import com.roze.appointment_service.dto.event.AuditEvent;
 import com.roze.appointment_service.dto.request.AppointmentRequest;
 import com.roze.appointment_service.dto.response.AppointmentResponse;
 import com.roze.appointment_service.dto.response.UserResponse;
@@ -9,6 +7,8 @@ import com.roze.appointment_service.enums.EventType;
 import com.roze.appointment_service.exception.AppointmentExistsException;
 import com.roze.appointment_service.exception.NoChangesMadeException;
 import com.roze.appointment_service.exception.NotFoundException;
+import com.roze.appointment_service.factory.AppointmentEventFactory;
+import com.roze.appointment_service.factory.AuditEventFactory;
 import com.roze.appointment_service.feign.UserClient;
 import com.roze.appointment_service.kafka.producer.KafkaEventProducer;
 import com.roze.appointment_service.mapper.AppointmentMapper;
@@ -20,23 +20,26 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.Locale;
-
 @Service
 public class AppointmentServiceImpl implements AppointmentService {
 
     @Autowired
-    AppointmentRepository appointmentRepository;
+    private AppointmentRepository appointmentRepository;
 
     @Autowired
-    AppointmentMapper appointmentMapper;
+    private AppointmentMapper appointmentMapper;
 
     @Autowired
-    UserClient userClient;
+    private UserClient userClient;
 
     @Autowired
-    KafkaEventProducer kafkaEventProducer;
+    private KafkaEventProducer kafkaEventProducer;
+
+    @Autowired
+    private AppointmentEventFactory appointmentEventFactory;
+
+    @Autowired
+    private AuditEventFactory auditEventFactory;
 
     @Override
     public AppointmentResponse saveAppointment(AppointmentRequest appointmentRequest) {
@@ -51,8 +54,10 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         AppointmentResponse response = appointmentMapper.entityToResponse(savedAppointment, ownerResponse, vetResponse);
 
-        kafkaEventProducer.sendEventToKafkaServer(createAuditEvent(EventType.CREATED, null, savedAppointment));
-        kafkaEventProducer.sendEventToKafkaServer(createAppointmentEvent(EventType.CREATED, response));
+        kafkaEventProducer.sendEventToKafkaServer(auditEventFactory
+                .createAuditEvent(EventType.CREATED, null, savedAppointment));
+        kafkaEventProducer.sendEventToKafkaServer(appointmentEventFactory
+                .createAppointmentEvent(EventType.CREATED, response));
 
         return response;
     }
@@ -89,10 +94,12 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         AppointmentResponse response = appointmentMapper.entityToResponse(updatedAppointment, ownerResponse, vetResponse);
 
-        kafkaEventProducer.sendEventToKafkaServer(createAuditEvent(EventType.UPDATED,
-                existingAppointmentForAuditEntry,
-                updatedAppointment));
-        kafkaEventProducer.sendEventToKafkaServer(createAppointmentEvent(EventType.UPDATED, response));
+        kafkaEventProducer.sendEventToKafkaServer(auditEventFactory
+                .createAuditEvent(EventType.UPDATED,
+                        existingAppointmentForAuditEntry,
+                        updatedAppointment));
+        kafkaEventProducer.sendEventToKafkaServer(appointmentEventFactory
+                .createAppointmentEvent(EventType.UPDATED, response));
 
         return response;
     }
@@ -104,8 +111,10 @@ public class AppointmentServiceImpl implements AppointmentService {
         UserResponse vetResponse = getUserByIdOrThrow(appointmentToDelete.getVetId());
         AppointmentResponse response = appointmentMapper.entityToResponse(appointmentToDelete, ownerResponse, vetResponse);
 
-        kafkaEventProducer.sendEventToKafkaServer(createAuditEvent(EventType.CANCELED, null, appointmentToDelete));
-        kafkaEventProducer.sendEventToKafkaServer(createAppointmentEvent(EventType.CANCELED, response));
+        kafkaEventProducer.sendEventToKafkaServer(auditEventFactory
+                .createAuditEvent(EventType.CANCELED, null, appointmentToDelete));
+        kafkaEventProducer.sendEventToKafkaServer(appointmentEventFactory
+                .createAppointmentEvent(EventType.CANCELED, response));
 
         appointmentRepository.deleteById(id);
     }
@@ -142,49 +151,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         try {
             return userClient.getUserById(userId);
         } catch (FeignException.NotFound e) {
-            throw new NotFoundException("User not found with id: " + userId);
+            throw new NotFoundException("User not found with ID: " + userId);
         }
-    }
-
-    private AppointmentEvent createAppointmentEvent(EventType eventType, AppointmentResponse appointmentResponse) {
-        return AppointmentEvent.builder()
-                .eventType(eventType)
-                .appointmentResponse(appointmentResponse)
-                .build();
-    }
-
-    private AuditEvent createAuditEvent(EventType eventType,
-                                        String existingAppointment,
-                                        AppointmentEntity updatedAppointment) {
-        return AuditEvent.builder()
-                .serviceName("Appointment-service")
-                .eventType(String.format("Appointment %s", eventType.toString()))
-                .initiatorUserId(updatedAppointment.getVetId())
-                .message(buildAuditEventMessage(eventType, existingAppointment, updatedAppointment))
-                .createdAt(LocalDateTime.now())
-                .build();
-    }
-
-    private String buildAuditEventMessage(EventType eventType,
-                                          String existingAppointment,
-                                          AppointmentEntity updatedAppointment) {
-        StringBuilder message = new StringBuilder();
-        message.append(String.format("Appointment with Id %d was %s: ",
-                updatedAppointment.getAppointmentId(),
-                eventType.toString().toLowerCase(Locale.ROOT)));
-
-        switch (eventType) {
-            case UPDATED -> {
-                message.append(String.format("FROM %s TO %s",
-                        existingAppointment,
-                        updatedAppointment));
-            }
-            case CREATED, CANCELED -> {
-                message.append(String.format(updatedAppointment.toString()));
-            }
-            default -> throw new IllegalArgumentException("Unsupported event type");
-        }
-
-        return message.toString();
     }
 }
