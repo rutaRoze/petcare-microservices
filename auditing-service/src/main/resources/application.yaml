@@ -1,9 +1,9 @@
 spring:
   application:
-    name: appointment-service
+    name: auditing-service
 
   datasource:
-    url: jdbc:mysql://localhost:3306/petcareappointmentdb
+    url: jdbc:mysql://localhost:3306/petcareauditdb
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -17,8 +17,12 @@ spring:
     hibernate:
       ddl-auto: update
 
+
   kafka:
     bootstrap-servers: localhost:9092
+    consumer:
+      group-id: audit-service-group
+      auto-offset-reset: earliest
 
 server:
-  port: 8081
+  port: 8083

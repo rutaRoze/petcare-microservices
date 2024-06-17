@@ -3,10 +3,14 @@ package com.roze.appointment_service.service.impl;
 import com.roze.appointment_service.dto.request.AppointmentRequest;
 import com.roze.appointment_service.dto.response.AppointmentResponse;
 import com.roze.appointment_service.dto.response.UserResponse;
+import com.roze.appointment_service.enums.EventType;
 import com.roze.appointment_service.exception.AppointmentExistsException;
 import com.roze.appointment_service.exception.NoChangesMadeException;
 import com.roze.appointment_service.exception.NotFoundException;
+import com.roze.appointment_service.factory.AppointmentEventFactory;
+import com.roze.appointment_service.factory.AuditEventFactory;
 import com.roze.appointment_service.feign.UserClient;
+import com.roze.appointment_service.kafka.producer.KafkaEventProducer;
 import com.roze.appointment_service.mapper.AppointmentMapper;
 import com.roze.appointment_service.persistance.AppointmentRepository;
 import com.roze.appointment_service.persistance.model.AppointmentEntity;
@@ -20,13 +24,22 @@ import org.springframework.stereotype.Service;
 public class AppointmentServiceImpl implements AppointmentService {
 
     @Autowired
-    AppointmentRepository appointmentRepository;
+    private AppointmentRepository appointmentRepository;
 
     @Autowired
-    AppointmentMapper appointmentMapper;
+    private AppointmentMapper appointmentMapper;
 
     @Autowired
-    UserClient userClient;
+    private UserClient userClient;
+
+    @Autowired
+    private KafkaEventProducer kafkaEventProducer;
+
+    @Autowired
+    private AppointmentEventFactory appointmentEventFactory;
+
+    @Autowired
+    private AuditEventFactory auditEventFactory;
 
     @Override
     public AppointmentResponse saveAppointment(AppointmentRequest appointmentRequest) {
@@ -39,7 +52,14 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         AppointmentEntity savedAppointment = appointmentRepository.save(appointmentToSave);
 
-        return appointmentMapper.entityToResponse(savedAppointment, ownerResponse, vetResponse);
+        AppointmentResponse response = appointmentMapper.entityToResponse(savedAppointment, ownerResponse, vetResponse);
+
+        kafkaEventProducer.sendEventToKafkaServer(auditEventFactory
+                .createAuditEvent(EventType.CREATED, null, savedAppointment));
+        kafkaEventProducer.sendEventToKafkaServer(appointmentEventFactory
+                .createAppointmentEvent(EventType.CREATED, response));
+
+        return response;
     }
 
     @Override
@@ -54,6 +74,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     public AppointmentResponse updateAppointmentById(Long id, AppointmentRequest appointmentRequest) {
         AppointmentEntity existingAppointment = getAppointmentByIdOrThrow(id);
+        String existingAppointmentForAuditEntry = existingAppointment.toString();
 
         checkIsAppointmentRequestHasAnyUpdates(existingAppointment, appointmentRequest);
 
@@ -71,12 +92,30 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         AppointmentEntity updatedAppointment = appointmentRepository.save(existingAppointment);
 
-        return appointmentMapper.entityToResponse(updatedAppointment, ownerResponse, vetResponse);
+        AppointmentResponse response = appointmentMapper.entityToResponse(updatedAppointment, ownerResponse, vetResponse);
+
+        kafkaEventProducer.sendEventToKafkaServer(auditEventFactory
+                .createAuditEvent(EventType.UPDATED,
+                        existingAppointmentForAuditEntry,
+                        updatedAppointment));
+        kafkaEventProducer.sendEventToKafkaServer(appointmentEventFactory
+                .createAppointmentEvent(EventType.UPDATED, response));
+
+        return response;
     }
 
     @Override
     public void deleteAppointmentById(Long id) {
-        getAppointmentByIdOrThrow(id);
+        AppointmentEntity appointmentToDelete = getAppointmentByIdOrThrow(id);
+        UserResponse ownerResponse = getUserByIdOrThrow(appointmentToDelete.getOwnerId());
+        UserResponse vetResponse = getUserByIdOrThrow(appointmentToDelete.getVetId());
+        AppointmentResponse response = appointmentMapper.entityToResponse(appointmentToDelete, ownerResponse, vetResponse);
+
+        kafkaEventProducer.sendEventToKafkaServer(auditEventFactory
+                .createAuditEvent(EventType.CANCELED, null, appointmentToDelete));
+        kafkaEventProducer.sendEventToKafkaServer(appointmentEventFactory
+                .createAppointmentEvent(EventType.CANCELED, response));
+
         appointmentRepository.deleteById(id);
     }
 
@@ -103,7 +142,7 @@ public class AppointmentServiceImpl implements AppointmentService {
                 appointmentToSave.getAppointmentDateTime()
         );
 
-         if (vetAppointmentExists) {
+        if (vetAppointmentExists) {
             throw new AppointmentExistsException("Appointment for given veterinarian, date and time already exists");
         }
     }
@@ -112,7 +151,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         try {
             return userClient.getUserById(userId);
         } catch (FeignException.NotFound e) {
-            throw new NotFoundException("User not found with id: " + userId);
+            throw new NotFoundException("User not found with ID: " + userId);
         }
     }
 }

@@ -12,7 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
-import java.util.Set;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -39,7 +39,7 @@ class UserControllerTest {
                 .surname("Doe")
                 .email("john@doe.com")
                 .phoneNumber("1234567890")
-                .roleNames(Set.of(RoleName.VET))
+                .roleNames(List.of(RoleName.VET))
                 .build();
     }
 
