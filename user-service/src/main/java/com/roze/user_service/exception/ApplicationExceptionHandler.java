@@ -33,6 +33,16 @@ public class ApplicationExceptionHandler {
         return buildResponse(ex.getMessage(), HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(NoChangesMadeException.class)
+    public ResponseEntity<Object> handle(NoChangesMadeException ex) {
+        return buildResponse(ex.getMessage(), HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(UserAlreadyExist.class)
+    public ResponseEntity<Object> handle(UserAlreadyExist ex) {
+        return buildResponse(ex.getMessage(), HttpStatus.CONFLICT);
+    }
+
     private ResponseEntity<Object> buildResponse(String message, HttpStatus status) {
         return new ResponseEntity<>(message, status);
     }
