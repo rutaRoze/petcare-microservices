@@ -1,15 +1,20 @@
 package com.roze.auth_service.service;
 
 import com.roze.auth_service.dto.request.AuthenticationRequest;
+import com.roze.auth_service.dto.request.UserProfileRequest;
 import com.roze.auth_service.dto.request.UserRequest;
 import com.roze.auth_service.dto.response.AuthenticationResponse;
+import com.roze.auth_service.dto.response.UserProfileResponse;
 import com.roze.auth_service.dto.response.UserResponse;
 import com.roze.auth_service.exception.AuthenticationFailedException;
 import com.roze.auth_service.exception.UserAlreadyExist;
+import com.roze.auth_service.feign.UserServiceClient;
 import com.roze.auth_service.mapper.SecurityUserDetailsMapper;
 import com.roze.auth_service.mapper.UserMapper;
+import com.roze.auth_service.mapper.UserProfileMapper;
 import com.roze.auth_service.persistance.UserRepository;
 import com.roze.auth_service.persistance.model.UserEntity;
+import feign.FeignException;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -30,6 +35,8 @@ public class AuthenticationService {
     @Autowired
     private UserMapper userMapper;
     @Autowired
+    private UserProfileMapper userProfileMapper;
+    @Autowired
     private PasswordEncoder passwordEncoder;
     @Autowired
     private SecurityUserDetailsMapper securityUserDetailsMapper;
@@ -37,6 +44,8 @@ public class AuthenticationService {
     private JwtService jwtService;
     @Autowired
     private AuthenticationManager authenticationManager;
+    @Autowired
+    private UserServiceClient userServiceClient;
 
     public AuthenticationResponse register(UserRequest registerRequest) {
 
@@ -44,13 +53,15 @@ public class AuthenticationService {
             throw new UserAlreadyExist(String.format("User with email %s already exists", registerRequest.getEmail()));
         }
 
+        UserProfileRequest userProfileRequest = userProfileMapper.userRequestToUserProfileRequest(registerRequest);
+        UserProfileResponse userProfileResponse = createUserProfileByIdOrThrow(userProfileRequest);
+
         UserEntity userToSave = userMapper.userRequestToUserEntity(registerRequest);
 
-//        userToSave.setName(sanitizeData(registerRequest.getName()));
-//        userToSave.setSurname(sanitizeData(registerRequest.getSurname()));
         userToSave.setEmail(sanitizeData(registerRequest.getEmail()).toLowerCase(Locale.ROOT));
         userToSave.setPassword(passwordEncoder.encode(sanitizeData(registerRequest.getPassword())));
         userToSave.setRoles(roleService.getRoleEntitiesFormRoleNames(registerRequest.getRoleNames()));
+        userToSave.setUserProfileId(userProfileResponse.getId());
 
         UserEntity savedUser = userRepository.save(userToSave);
 
@@ -99,5 +110,13 @@ public class AuthenticationService {
         }
 
         return data.trim();
+    }
+
+    private UserProfileResponse createUserProfileByIdOrThrow(UserProfileRequest userProfileRequest) {
+        try {
+            return userServiceClient.createUser(userProfileRequest);
+        } catch (FeignException.Conflict e) {
+            throw new UserAlreadyExist(String.format("User with email %s already exists", userProfileRequest.getEmail()));
+        }
     }
 }
