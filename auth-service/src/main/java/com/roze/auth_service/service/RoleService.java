@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 @Service
 public class RoleService {
@@ -17,7 +16,7 @@ public class RoleService {
     @Autowired
     private RoleRepository roleRepository;
 
-    public List<RoleEntity> getRoleEntitiesFormRoleNames(Set<RoleName> roleNames) {
+    public List<RoleEntity> getRoleEntitiesFormRoleNames(List<RoleName> roleNames) {
         List<RoleEntity> roleEntities = new ArrayList<>();
         for (RoleName roleName : roleNames) {
             RoleEntity roleEntity = roleRepository.findByName(roleName)
