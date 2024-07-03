@@ -49,6 +49,9 @@ public class UserEntity {
     )
     private List<RoleEntity> roles;
 
+    @Column(name = "user_profile_id", nullable = false)
+    private Long userProfileId;
+
     public void addRole(RoleEntity role) {
         if (roles == null) {
             roles = new ArrayList<>();
