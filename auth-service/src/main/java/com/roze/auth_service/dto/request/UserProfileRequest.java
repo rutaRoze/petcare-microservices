@@ -1,6 +1,5 @@
 package com.roze.auth_service.dto.request;
 
-
 import com.roze.auth_service.enums.RoleName;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -17,7 +16,7 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserRequest {
+public class UserProfileRequest {
     @NotBlank
     @Size(min = 2, max = 30)
     private String name;
@@ -29,12 +28,6 @@ public class UserRequest {
     @NotBlank
     @Email(message = "Invalid email format. Please provide a valid email address.")
     private String email;
-
-    @NotBlank
-    @Size(min = 8, max = 30)
-    @Pattern(regexp = "^(?!.*\\s)(?=.*[A-Z])(?=.*\\d)(?=.*[a-z])(?=.*[!@#$%^&*()]).+$",
-            message = "Invalid password format. Please provide a valid password.")
-    private String password;
 
     @NotBlank
     @Size(min = 2, max = 20)

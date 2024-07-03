@@ -7,13 +7,18 @@ import com.roze.auth_service.persistance.model.RoleEntity;
 import com.roze.auth_service.persistance.model.UserEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.Mappings;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring")
 public interface UserMapper {
-    @Mapping(target = "roleNames", source = "roles")
+
+    @Mappings({
+            @Mapping(target = "roleNames", source = "roles"),
+            @Mapping(target = "email", source = "email"),
+    })
     UserResponse userEntityToUserResponse(UserEntity userEntity);
 
     default List<RoleName> mapRoles(List<RoleEntity> roles) {
@@ -22,7 +27,12 @@ public interface UserMapper {
                 .collect(Collectors.toList());
     }
 
-    @Mapping(target = "roles", source = "roleNames")
+    @Mappings({
+            @Mapping(target = "roles", source = "roleNames"),
+            @Mapping(target = "id", ignore = true),
+            @Mapping(target = "password", source = "password"),
+            @Mapping(target = "email", source = "email")
+    })
     UserEntity userRequestToUserEntity(UserRequest userRequest);
 
     default List<RoleEntity> mapRoleNamesToRoles(List<RoleName> roleNames) {
