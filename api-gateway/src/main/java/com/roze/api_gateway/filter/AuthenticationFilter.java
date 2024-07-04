@@ -9,6 +9,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+import java.util.Objects;
+
 @Component
 public class AuthenticationFilter extends AbstractGatewayFilterFactory<AuthenticationFilter.Config> {
 
@@ -30,7 +33,7 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                     throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing authorization header");
                 }
 
-                String authHeader = exchange.getRequest().getHeaders().get(HttpHeaders.AUTHORIZATION).get(0);
+                String authHeader = Objects.requireNonNull(exchange.getRequest().getHeaders().get(HttpHeaders.AUTHORIZATION)).getFirst();
 
                 if (authHeader != null && authHeader.startsWith("Bearer ")) {
                     authHeader = authHeader.substring(7);
@@ -38,8 +41,19 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                     throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid authorization header");
                 }
 
+                final String finalAuthHeader = authHeader;
+
                 try {
-                    jwtService.extractAllClaims(authHeader);
+                    jwtService.extractAllClaims(finalAuthHeader);
+                    List<String> requiredRoles = routeValidator.getRequiredRole(exchange.getRequest());
+
+                    if (!requiredRoles.isEmpty()) {
+                        boolean hasRequiredRole = requiredRoles.stream()
+                                .anyMatch(role -> jwtService.hasRole(finalAuthHeader, role));
+                        if (!hasRequiredRole) {
+                            throw new RuntimeException("Unauthorized access - insufficient role");
+                        }
+                    }
                 } catch (Exception e) {
                     throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized access");
                 }
