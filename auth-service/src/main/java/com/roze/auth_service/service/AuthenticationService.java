@@ -5,17 +5,17 @@ import com.roze.auth_service.dto.request.UserProfileRequest;
 import com.roze.auth_service.dto.request.UserRequest;
 import com.roze.auth_service.dto.response.AuthenticationResponse;
 import com.roze.auth_service.dto.response.UserProfileResponse;
-import com.roze.auth_service.dto.response.UserResponse;
 import com.roze.auth_service.exception.AuthenticationFailedException;
 import com.roze.auth_service.exception.UserAlreadyExist;
 import com.roze.auth_service.feign.UserServiceClient;
 import com.roze.auth_service.mapper.SecurityUserDetailsMapper;
-import com.roze.auth_service.mapper.UserMapper;
+import com.roze.auth_service.mapper.AuthUserMapper;
 import com.roze.auth_service.mapper.UserProfileMapper;
-import com.roze.auth_service.persistance.UserRepository;
-import com.roze.auth_service.persistance.model.UserEntity;
+import com.roze.auth_service.persistance.AuthUserRepository;
+import com.roze.auth_service.persistance.model.AuthUserEntity;
 import feign.FeignException;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -26,14 +26,13 @@ import org.springframework.stereotype.Service;
 import java.util.Locale;
 
 @Service
+@Slf4j
 public class AuthenticationService {
 
     @Autowired
-    private UserRepository userRepository;
+    private AuthUserRepository authUserRepository;
     @Autowired
-    private RoleService roleService;
-    @Autowired
-    private UserMapper userMapper;
+    private AuthUserMapper authUserMapper;
     @Autowired
     private UserProfileMapper userProfileMapper;
     @Autowired
@@ -56,21 +55,24 @@ public class AuthenticationService {
         UserProfileRequest userProfileRequest = userProfileMapper.userRequestToUserProfileRequest(registerRequest);
         UserProfileResponse userProfileResponse = createUserProfileByIdOrThrow(userProfileRequest);
 
-        UserEntity userToSave = userMapper.userRequestToUserEntity(registerRequest);
+        AuthUserEntity userToSave = authUserMapper.userRequestToAuthUserEntity(registerRequest);
+
+        log.debug("User request: {}", userToSave);
+
 
         userToSave.setEmail(sanitizeData(registerRequest.getEmail()).toLowerCase(Locale.ROOT));
         userToSave.setPassword(passwordEncoder.encode(sanitizeData(registerRequest.getPassword())));
-        userToSave.setRoles(roleService.getRoleEntitiesFormRoleNames(registerRequest.getRoleNames()));
         userToSave.setUserProfileId(userProfileResponse.getId());
 
-        UserEntity savedUser = userRepository.save(userToSave);
+        AuthUserEntity savedUser = authUserRepository.save(userToSave);
+
+        log.debug("User saved: {}", savedUser);
 
         String jwtToken = jwtService.generateToken(securityUserDetailsMapper.mapToSecurityUserDetails(savedUser));
-        UserResponse userResponse = userMapper.userEntityToUserResponse(savedUser);
 
         return AuthenticationResponse.builder()
                 .token(jwtToken)
-                .userResponse(userResponse)
+                .userEmail(savedUser.getEmail())
                 .build();
     }
 
@@ -87,21 +89,21 @@ public class AuthenticationService {
             throw new AuthenticationFailedException("Invalid email or password");
         }
 
-
-        UserEntity userEntity = userRepository.findByEmail(authenticateRequest.getEmail())
+        AuthUserEntity authUserEntity = authUserRepository.findByEmail(authenticateRequest.getEmail())
                 .orElseThrow(() -> new EntityNotFoundException("Entity not found"));
 
-        String jwtToken = jwtService.generateToken(securityUserDetailsMapper.mapToSecurityUserDetails(userEntity));
-        UserResponse userResponse = userMapper.userEntityToUserResponse(userEntity);
+        log.debug("User to authenticate: {}", authUserEntity);
+
+        String jwtToken = jwtService.generateToken(securityUserDetailsMapper.mapToSecurityUserDetails(authUserEntity));
 
         return AuthenticationResponse.builder()
                 .token(jwtToken)
-                .userResponse(userResponse)
+                .userEmail(authUserEntity.getEmail())
                 .build();
     }
 
     private boolean checkIfUserExistsByEmail(String email) {
-        return userRepository.existsByEmailIgnoreCase(email);
+        return authUserRepository.existsByEmailIgnoreCase(email);
     }
 
     private String sanitizeData(String data) {
