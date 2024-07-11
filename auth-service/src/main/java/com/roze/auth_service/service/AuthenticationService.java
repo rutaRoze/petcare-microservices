@@ -5,14 +5,17 @@ import com.roze.auth_service.dto.request.UserProfileRequest;
 import com.roze.auth_service.dto.request.UserRequest;
 import com.roze.auth_service.dto.response.AuthenticationResponse;
 import com.roze.auth_service.dto.response.UserProfileResponse;
+import com.roze.auth_service.enums.TokenType;
 import com.roze.auth_service.exception.AuthenticationFailedException;
 import com.roze.auth_service.exception.UserAlreadyExist;
 import com.roze.auth_service.feign.UserServiceClient;
-import com.roze.auth_service.mapper.SecurityUserDetailsMapper;
 import com.roze.auth_service.mapper.AuthUserMapper;
+import com.roze.auth_service.mapper.SecurityUserDetailsMapper;
 import com.roze.auth_service.mapper.UserProfileMapper;
 import com.roze.auth_service.persistance.AuthUserRepository;
+import com.roze.auth_service.persistance.TokenRepository;
 import com.roze.auth_service.persistance.model.AuthUserEntity;
+import com.roze.auth_service.persistance.model.TokenEntity;
 import feign.FeignException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +26,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Locale;
 
 @Service
@@ -45,6 +49,8 @@ public class AuthenticationService {
     private AuthenticationManager authenticationManager;
     @Autowired
     private UserServiceClient userServiceClient;
+    @Autowired
+    private TokenRepository tokenRepository;
 
     public AuthenticationResponse register(UserRequest registerRequest) {
 
@@ -70,6 +76,8 @@ public class AuthenticationService {
 
         String jwtToken = jwtService.generateToken(securityUserDetailsMapper.mapToSecurityUserDetails(savedUser));
 
+        saveUserToken(savedUser, jwtToken);
+
         return AuthenticationResponse.builder()
                 .token(jwtToken)
                 .userEmail(savedUser.getEmail())
@@ -89,16 +97,19 @@ public class AuthenticationService {
             throw new AuthenticationFailedException("Invalid email or password");
         }
 
-        AuthUserEntity authUserEntity = authUserRepository.findByEmail(authenticateRequest.getEmail())
+        AuthUserEntity authUser = authUserRepository.findByEmail(authenticateRequest.getEmail())
                 .orElseThrow(() -> new EntityNotFoundException("Entity not found"));
 
-        log.debug("User to authenticate: {}", authUserEntity);
+        log.debug("User to authenticate: {}", authUser);
 
-        String jwtToken = jwtService.generateToken(securityUserDetailsMapper.mapToSecurityUserDetails(authUserEntity));
+        String jwtToken = jwtService.generateToken(securityUserDetailsMapper.mapToSecurityUserDetails(authUser));
+
+        revokeAllUserTokens(authUser);
+        saveUserToken(authUser, jwtToken);
 
         return AuthenticationResponse.builder()
                 .token(jwtToken)
-                .userEmail(authUserEntity.getEmail())
+                .userEmail(authUser.getEmail())
                 .build();
     }
 
@@ -120,5 +131,29 @@ public class AuthenticationService {
         } catch (FeignException.Conflict e) {
             throw new UserAlreadyExist(String.format("User with email %s already exists", userProfileRequest.getEmail()));
         }
+    }
+
+    public void revokeAllUserTokens(AuthUserEntity authUser) {
+        List<TokenEntity> validUserTokens = tokenRepository.findAllValidTokensByUser(authUser.getId());
+        if(validUserTokens.isEmpty()) {
+            return;
+        }
+
+        validUserTokens.forEach(token -> {
+            token.setExpired(true);
+        });
+
+        tokenRepository.saveAll(validUserTokens);
+    }
+
+    public void saveUserToken(AuthUserEntity authUser, String jwtToken) {
+        TokenEntity token = TokenEntity.builder()
+                .authUser(authUser)
+                .token(jwtToken)
+                .tokenType(TokenType.BEARER)
+                .isExpired(false)
+                .build();
+
+        tokenRepository.save(token);
     }
 }
