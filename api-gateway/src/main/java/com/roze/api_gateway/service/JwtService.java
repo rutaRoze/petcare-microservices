@@ -7,6 +7,7 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -27,6 +28,10 @@ public class JwtService {
         Claims claims = extractAllClaims(token);
         List<String> roles = claims.get("roles", List.class);
         return roles.contains(role);
+    }
+
+    public boolean isExpired(String token) {
+        return extractAllClaims(token).getExpiration().before(new Date());
     }
 
     private Key getSignKey() {

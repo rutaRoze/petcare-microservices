@@ -4,58 +4,71 @@ import com.roze.api_gateway.service.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
-import org.springframework.http.HttpHeaders;
+import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Objects;
 
 @Component
 public class AuthenticationFilter extends AbstractGatewayFilterFactory<AuthenticationFilter.Config> {
 
     @Autowired
-    private RouteValidator routeValidator;
-    @Autowired
     private JwtService jwtService;
+
+    @Autowired
+    private RouteValidator routeValidator;
 
     public AuthenticationFilter() {
         super(Config.class);
     }
 
+    public static class Config {
+    }
+
     @Override
     public GatewayFilter apply(Config config) {
         return (exchange, chain) -> {
+            ServerHttpRequest request = exchange.getRequest();
 
-            if (routeValidator.isSecured.test(exchange.getRequest())) {
-                if (!exchange.getRequest().getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
-                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing authorization header");
+            if (routeValidator.isSecured.test(request)) {
+                if (authMissing(request)) {
+                    return onError(exchange, HttpStatus.UNAUTHORIZED, "Missing authorization header");
                 }
 
-                String authHeader = Objects.requireNonNull(exchange.getRequest().getHeaders().get(HttpHeaders.AUTHORIZATION)).getFirst();
+                final String token = request.getHeaders().getOrEmpty("Authorization").getFirst();
 
-                if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                    authHeader = authHeader.substring(7);
-                } else {
-                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid authorization header");
+                if (token == null || !token.startsWith("Bearer ")) {
+                    return onError(exchange, HttpStatus.UNAUTHORIZED, "Invalid authorization header");
                 }
 
-                final String finalAuthHeader = authHeader;
+                String authToken = token.substring(7);
 
                 try {
-                    jwtService.extractAllClaims(finalAuthHeader);
-                    List<String> requiredRoles = routeValidator.getRequiredRole(exchange.getRequest());
+                    jwtService.extractAllClaims(authToken);
+
+                    List<String> requiredRoles = routeValidator.getRequiredRole(request);
 
                     if (!requiredRoles.isEmpty()) {
                         boolean hasRequiredRole = requiredRoles.stream()
-                                .anyMatch(role -> jwtService.hasRole(finalAuthHeader, role));
+                                .anyMatch(role -> jwtService.hasRole(authToken, role));
                         if (!hasRequiredRole) {
-                            throw new RuntimeException("Unauthorized access - insufficient role");
+                            return onError(exchange, HttpStatus.FORBIDDEN, "Unauthorized access - insufficient role");
                         }
                     }
+
+                    if (jwtService.isExpired(authToken)) {
+                        return onError(exchange, HttpStatus.UNAUTHORIZED, "Token is expired");
+                    }
+
                 } catch (Exception e) {
-                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized access");
+                    return onError(exchange, HttpStatus.UNAUTHORIZED, "Unauthorized access");
                 }
             }
 
@@ -63,7 +76,18 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
         };
     }
 
-    public static class Config {
+    private boolean authMissing(ServerHttpRequest request) {
+        return !request.getHeaders().containsKey("Authorization");
+    }
 
+    private Mono<Void> onError(ServerWebExchange exchange, HttpStatus httpStatus, String message) {
+        ServerHttpResponse response = exchange.getResponse();
+        response.setStatusCode(httpStatus);
+
+        byte[] bytes = message.getBytes(StandardCharsets.UTF_8);
+        response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+        DataBuffer buffer = response.bufferFactory().wrap(bytes);
+
+        return response.writeWith(Mono.just(buffer));
     }
 }
