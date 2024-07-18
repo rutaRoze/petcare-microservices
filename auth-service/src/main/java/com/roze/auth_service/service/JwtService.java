@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class JwtService {
 
     private static final String SECRET_KEY = "83951fba8cc095d2be5af6471366263b0919d5f2ff842e72117d76022352b4f3";
-    private final long jwtExpiration = 1000 * 60 * 60 * 24;
+    private final long jwtExpiration = 1000 * 60 * 60 * 2;
 
     @Autowired
     private UserServiceClient userServiceClient;

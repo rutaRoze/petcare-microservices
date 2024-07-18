@@ -1,5 +1,7 @@
 package com.roze.auth_service.config;
 
+import com.roze.auth_service.persistance.TokenRepository;
+import com.roze.auth_service.persistance.model.TokenEntity;
 import com.roze.auth_service.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -27,6 +30,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final TokenRepository tokenRepository;
 
     @Override
     protected void doFilterInternal(
@@ -51,7 +55,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             logger.debug("Extracted username from JWT: {}", userEmail);
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
-            if (jwtService.isTokenValid(jwt, userDetails)) {
+            Optional<TokenEntity> tokenOptional = tokenRepository.findByToken(jwt);
+            boolean isTokenValid = tokenOptional
+                    .map(token -> !token.isExpired())
+                    .orElse(false);
+
+            if (jwtService.isTokenValid(jwt, userDetails) && isTokenValid) {
                 logger.debug("JWT token is valid for user: {}", userEmail);
                 UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
                         userDetails,

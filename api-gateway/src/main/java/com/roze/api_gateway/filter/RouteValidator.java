@@ -28,7 +28,7 @@ public class RouteValidator {
                     .method(HttpMethod.GET)
                     .build(), List.of("OWNER", "VET"),
             RouteKey.builder()
-                    .path(List.of("/api/v1/users/{id}", "/api/v1/appointments/{id}"))
+                    .path(List.of("/api/v1/users", "/api/v1/appointments"))
                     .method(HttpMethod.POST)
                     .build(), List.of("OWNER", "VET"),
             RouteKey.builder()
