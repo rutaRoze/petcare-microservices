@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  service-registry:
+    build:
+      context: ./service-registry
+      dockerfile: Dockerfile
+    ports:
+      - "8761:8761"
+    networks:
+      default:
+        ipv4_address: 172.18.0.10
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - service-registry
+    environment:
+      - eureka.client.service-url.defaultZone=http://service-registry:8761/eureka
+    networks:
+      default:
+        ipv4_address: 172.18.0.2
+    extra_hosts:
+      - "auth-service:172.18.0.3"
+      - "user-service:172.18.0.4"
+
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    ports:
+      - "8084:8084"
+    depends_on:
+      - service-registry
+      - auth-db
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://auth-db:3306/petcareauthdb
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - SERVER_PORT=8084
+      - eureka.client.service-url.defaultZone=http://service-registry:8761/eureka
+    networks:
+      default:
+        ipv4_address: 172.18.0.3
+
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    depends_on:
+      - service-registry
+      - user-db
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://user-db:3306/petcareuserdb
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - SERVER_PORT=8081
+      - eureka.client.service-url.defaultZone=http://service-registry:8761/eureka
+    networks:
+      default:
+        ipv4_address: 172.18.0.4
+
+  auth-db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: petcareauthdb
+    ports:
+      - "3306:3306"
+    networks:
+      default:
+        ipv4_address: 172.18.0.5
+
+  user-db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: petcareuserdb
+    ports:
+      - "3307:3306"
+    networks:
+      default:
+        ipv4_address: 172.18.0.6
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.18.0.0/24
