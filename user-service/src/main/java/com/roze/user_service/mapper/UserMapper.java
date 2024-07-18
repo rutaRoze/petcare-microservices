@@ -1,5 +1,6 @@
 package com.roze.user_service.mapper;
 
+import com.roze.user_service.dto.request.UserRequest;
 import com.roze.user_service.dto.response.UserResponse;
 import com.roze.user_service.enums.RoleName;
 import com.roze.user_service.persistance.model.RoleEntity;
@@ -18,6 +19,19 @@ public interface UserMapper {
     default List<RoleName> mapRoles(List<RoleEntity> roles) {
         return roles.stream()
                 .map(role -> role.getName())
+                .collect(Collectors.toList());
+    }
+
+    @Mapping(target = "roles", source = "roleNames")
+    UserEntity userRequestToUserEntity(UserRequest userRequest);
+
+    default List<RoleEntity> mapRoleNamesToRoles(List<RoleName> roleNames) {
+        return roleNames.stream()
+                .map(roleName -> {
+                    RoleEntity roleEntity = new RoleEntity();
+                    roleEntity.setName(roleName);
+                    return roleEntity;
+                })
                 .collect(Collectors.toList());
     }
 }
