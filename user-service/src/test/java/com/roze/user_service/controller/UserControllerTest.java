@@ -43,44 +43,44 @@ class UserControllerTest {
                 .build();
     }
 
-//    @Test
-//    void getUserById_WhenValidRequest_ReturnsUserResponse() throws Exception {
-//        Long validId = 1L;
-//        UserResponse userResponse = setUpUserResponse();
-//
-//        when(userServiceMock.findUserById(validId)).thenReturn(userResponse);
-//
-//        mockMvc.perform(MockMvcRequestBuilders
-//                        .get(URLWithId, validId)
-//                        .contentType(MediaType.APPLICATION_JSON))
-//                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.id").value(validId))
-//                .andExpect(jsonPath("$.name").value("John"))
-//                .andExpect(jsonPath("$.surname").value("Doe"))
-//                .andExpect(jsonPath("$.email").value("john@doe.com"))
-//                .andExpect(jsonPath("$.phoneNumber").value("1234567890"))
-//                .andExpect(jsonPath("$.roleNames[0]").value("VET"));
-//
-//        verify(userServiceMock, times(1)).findUserById(validId);
-//    }
-//
-//    @Test
-//    void findUserById_WhenNotFound_ReturnsNotFound() throws Exception {
-//        Long nonExistentId = 999L;
-//        String exceptionMessage = "User not found by id: ";
-//
-//        when(userServiceMock.findUserById(nonExistentId)).thenThrow(new EntityNotFoundException(exceptionMessage));
-//
-//        mockMvc.perform(MockMvcRequestBuilders
-//                        .get(URLWithId, nonExistentId)
-//                        .contentType(MediaType.APPLICATION_JSON))
-//                .andExpect(status().isNotFound())
-//                .andExpect(result -> assertTrue(result.getResolvedException() instanceof EntityNotFoundException))
-//                .andExpect(result -> {
-//                    String actualErrorMessage = result.getResponse().getContentAsString();
-//                    assertThat(actualErrorMessage).contains(exceptionMessage);
-//                });
-//
-//        verify(userServiceMock, times(1)).findUserById(nonExistentId);
-//    }
+    @Test
+    void getUserById_WhenValidRequest_ReturnsUserResponse() throws Exception {
+        Long validId = 1L;
+        UserResponse userResponse = setUpUserResponse();
+
+        when(userServiceMock.findUserById(validId)).thenReturn(userResponse);
+
+        mockMvc.perform(MockMvcRequestBuilders
+                        .get(URLWithId, validId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(validId))
+                .andExpect(jsonPath("$.name").value("John"))
+                .andExpect(jsonPath("$.surname").value("Doe"))
+                .andExpect(jsonPath("$.email").value("john@doe.com"))
+                .andExpect(jsonPath("$.phoneNumber").value("1234567890"))
+                .andExpect(jsonPath("$.roleNames[0]").value("VET"));
+
+        verify(userServiceMock, times(1)).findUserById(validId);
+    }
+
+    @Test
+    void findUserById_WhenNotFound_ReturnsNotFound() throws Exception {
+        Long nonExistentId = 999L;
+        String exceptionMessage = "User not found by id: ";
+
+        when(userServiceMock.findUserById(nonExistentId)).thenThrow(new EntityNotFoundException(exceptionMessage));
+
+        mockMvc.perform(MockMvcRequestBuilders
+                        .get(URLWithId, nonExistentId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(result -> assertTrue(result.getResolvedException() instanceof EntityNotFoundException))
+                .andExpect(result -> {
+                    String actualErrorMessage = result.getResponse().getContentAsString();
+                    assertThat(actualErrorMessage).contains(exceptionMessage);
+                });
+
+        verify(userServiceMock, times(1)).findUserById(nonExistentId);
+    }
 }
