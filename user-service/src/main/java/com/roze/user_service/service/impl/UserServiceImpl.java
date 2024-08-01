@@ -13,6 +13,8 @@ import com.roze.user_service.service.RoleService;
 import com.roze.user_service.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,10 +23,10 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
 
     @Autowired
-    UserRepository userRepository;
+    private UserRepository userRepository;
 
     @Autowired
-    UserMapper userMapper;
+    private UserMapper userMapper;
 
     @Autowired
     private RoleService roleService;
@@ -48,6 +50,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Cacheable(value = "usersCache", key = "'allUsers'")
     public List<UserResponse> findAllUsers() {
 
         return userRepository.findAll().stream()
@@ -56,6 +59,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Cacheable(value = "usersCache", key = "#id")
     public UserResponse findUserById(Long id) {
 
         UserEntity userEntity = userRepository.findById(id)
@@ -64,6 +68,8 @@ public class UserServiceImpl implements UserService {
         return userMapper.userEntityToUserResponse(userEntity);
     }
 
+    @Override
+    @CacheEvict(value = "usersCache", allEntries = true)
     public UserResponse updateUserById(Long id, UserRequest userRequest) {
         UserEntity existingUser = getUserByIdOrThrow(id);
 
@@ -82,6 +88,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @CacheEvict(value = "usersCache", allEntries = true)
     public void deleteUserById(Long id) {
         getUserByIdOrThrow(id);
         userRepository.deleteById(id);
