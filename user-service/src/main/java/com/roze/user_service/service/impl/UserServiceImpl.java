@@ -32,6 +32,7 @@ public class UserServiceImpl implements UserService {
     private RoleService roleService;
 
     @Override
+    @CacheEvict(value = "usersCache", allEntries = true)
     public UserResponse saveUser(UserRequest userRequest) {
 
         if (checkIfUserExistsByEmail(userRequest.getEmail())) {
@@ -59,7 +60,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Cacheable(value = "usersCache", key = "#id")
     public UserResponse findUserById(Long id) {
 
         UserEntity userEntity = userRepository.findById(id)

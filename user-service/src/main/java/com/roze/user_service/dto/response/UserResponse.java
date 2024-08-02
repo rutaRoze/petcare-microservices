@@ -6,14 +6,14 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.util.List;
-import java.util.Set;
 
 @Getter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserResponse {
+public class UserResponse implements Serializable {
     private Long id;
     private String name;
     private String surname;
