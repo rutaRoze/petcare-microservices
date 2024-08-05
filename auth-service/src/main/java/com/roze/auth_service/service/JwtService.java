@@ -2,7 +2,6 @@ package com.roze.auth_service.service;
 
 import com.roze.auth_service.dto.SecurityUserDetails;
 import com.roze.auth_service.enums.RoleName;
-import com.roze.auth_service.feign.UserServiceClient;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -29,7 +28,7 @@ public class JwtService {
     private final long jwtExpiration = 1000 * 60 * 60 * 2;
 
     @Autowired
-    private UserServiceClient userServiceClient;
+    private UserProfileService userProfileService;
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -46,7 +45,7 @@ public class JwtService {
         log.debug("Generating token for user: {}", securityUserDetails.getEmail());
         log.debug("User roles: {}", securityUserDetails.getRoleList());
 
-        List<RoleName> roles = userServiceClient.getUserById(securityUserDetails.getUserProfileId()).getRoleNames();
+        List<RoleName> roles = userProfileService.getUserRoles(securityUserDetails.getUserProfileId());
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("roles", roles.stream()

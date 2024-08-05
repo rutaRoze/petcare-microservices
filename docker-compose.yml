@@ -74,11 +74,14 @@ services:
     depends_on:
       - service-registry
       - auth-db
+      - redis
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://auth-db:3306/petcareauthdb
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=root
       - eureka.client.service-url.defaultZone=http://service-registry:8761/eureka
+      - SPRING_REDIS_HOST=172.18.0.22
+      - SPRING_REDIS_PORT=6379
     networks:
       default:
         ipv4_address: 172.18.0.3
