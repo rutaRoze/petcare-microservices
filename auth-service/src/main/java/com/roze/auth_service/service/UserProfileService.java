@@ -5,6 +5,7 @@ import com.roze.auth_service.enums.RoleName;
 import com.roze.auth_service.feign.UserServiceClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -22,5 +23,10 @@ public class UserProfileService {
         UserProfileResponse userProfile = userServiceClient.getUserById(userProfileId);
         log.debug("UserProfileResponse fetched: {}", userProfile);
         return userProfile.getRoleNames();
+    }
+
+    @CacheEvict(value = "userRoleCache", key = "#userProfileId")
+    public void evictCache(Long userProfileId) {
+        log.debug("Cache evicted for userProfileId: {}", userProfileId);
     }
 }

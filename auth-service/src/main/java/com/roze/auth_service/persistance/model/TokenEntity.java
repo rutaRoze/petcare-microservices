@@ -37,6 +37,6 @@ public class TokenEntity {
     private boolean isExpired;
 
     @ManyToOne
-    @JoinColumn(name = "auth_user_id")
+    @JoinColumn(name = "auth_user_id", nullable = false)
     private AuthUserEntity authUser;
 }

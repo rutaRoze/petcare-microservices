@@ -1,5 +1,6 @@
 package com.roze.auth_service.persistance.model;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -37,7 +38,7 @@ public class AuthUserEntity {
     @Column(name = "user_profile_id", nullable = false)
     private Long userProfileId;
 
-    @OneToMany(mappedBy = "authUser")
+    @OneToMany(mappedBy = "authUser", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     private List<TokenEntity> tokens;
 }

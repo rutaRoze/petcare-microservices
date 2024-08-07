@@ -11,4 +11,5 @@ public interface AuthUserRepository extends JpaRepository<AuthUserEntity, Long> 
 
     boolean existsByEmailIgnoreCase(String email);
     Optional<AuthUserEntity> findByEmail(String email);
+    Optional<AuthUserEntity> findByUserProfileId(Long userProfileId);
 }
