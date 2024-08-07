@@ -84,7 +84,7 @@ public class AuthenticationService {
                 .build();
     }
 
-    public AuthenticationResponse authenticate(AuthenticationRequest authenticateRequest) throws Exception {
+    public AuthenticationResponse authenticate(AuthenticationRequest authenticateRequest) {
 
         try {
             authenticationManager.authenticate(
@@ -135,7 +135,7 @@ public class AuthenticationService {
 
     public void revokeAllUserTokens(AuthUserEntity authUser) {
         List<TokenEntity> validUserTokens = tokenRepository.findAllValidTokensByUser(authUser.getId());
-        if(validUserTokens.isEmpty()) {
+        if (validUserTokens.isEmpty()) {
             return;
         }
 
@@ -155,5 +155,12 @@ public class AuthenticationService {
                 .build();
 
         tokenRepository.save(token);
+    }
+
+    public void deleteUserByProfileId(Long userProfileId) {
+        AuthUserEntity authUser = authUserRepository.findByUserProfileId(userProfileId)
+                .orElseThrow(() -> new EntityNotFoundException("AuthUser not found for UserProfileId: " + userProfileId));
+
+        authUserRepository.deleteById(authUser.getId());
     }
 }
