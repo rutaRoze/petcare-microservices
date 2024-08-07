@@ -5,6 +5,7 @@ import com.roze.user_service.dto.response.UserResponse;
 import com.roze.user_service.enums.RoleName;
 import com.roze.user_service.exception.NoChangesMadeException;
 import com.roze.user_service.exception.UserAlreadyExist;
+import com.roze.user_service.kafka.producer.KafkaEventProducer;
 import com.roze.user_service.mapper.UserMapper;
 import com.roze.user_service.persistance.UserRepository;
 import com.roze.user_service.persistance.model.RoleEntity;
@@ -30,6 +31,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private RoleService roleService;
+
+    @Autowired
+    private KafkaEventProducer kafkaEventProducer;
 
     @Override
     @CacheEvict(value = "usersCache", allEntries = true)
@@ -92,6 +96,9 @@ public class UserServiceImpl implements UserService {
     public void deleteUserById(Long id) {
         getUserByIdOrThrow(id);
         userRepository.deleteById(id);
+
+        kafkaEventProducer.sendUserDeletionEvent(id);
+        kafkaEventProducer.sendCacheEvictionEvent(id);
     }
 
     private UserEntity getUserByIdOrThrow(Long id) {
