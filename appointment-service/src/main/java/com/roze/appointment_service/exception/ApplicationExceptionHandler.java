@@ -54,6 +54,11 @@ public class ApplicationExceptionHandler {
         return buildResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<Object> handle(ServiceUnavailableException ex) {
+        return buildResponse(ex.getMessage(), HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
     private ResponseEntity<Object> buildResponse(String message, HttpStatus status) {
         return new ResponseEntity<>(message, status);
     }
