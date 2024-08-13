@@ -18,9 +18,9 @@ import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
-public class UserServiceJwtAuthenticationFilter extends OncePerRequestFilter {
+public class AppointmentServiceJwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private static final Logger logger = LoggerFactory.getLogger(UserServiceJwtAuthenticationFilter.class);
+    private static final Logger logger = LoggerFactory.getLogger(AppointmentServiceJwtAuthenticationFilter.class);
 
     private final AuthServiceClient authServiceClient;
 
