@@ -20,5 +20,16 @@ spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
 
+  resilience4j.retry:
+    instances:
+      userServiceRetry:
+        max-attempts: 3
+        wait-duration: 10s
+        ignore-exceptions:
+          - com.roze.appointment_service.exception.NotFoundException
+        retry-exceptions:
+          - feign.RetryableException
+          - java.net.UnknownHostException
+
 server:
   port: 8082
