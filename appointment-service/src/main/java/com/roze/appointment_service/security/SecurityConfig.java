@@ -16,13 +16,14 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final UserServiceJwtAuthenticationFilter jwtAuthenticationFilter;
+    private final AppointmentServiceJwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(requests -> {
+                            requests.requestMatchers("/actuator/**").permitAll();
                             requests.requestMatchers
                                     (HttpMethod.GET, "/api/v1/appointments/{id}").permitAll();
                             requests.requestMatchers
