@@ -23,6 +23,7 @@ public class SecurityConfig {
 
         http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(requests -> {
+                            requests.requestMatchers("/actuator/**").permitAll();
                             requests.requestMatchers
                                     (HttpMethod.GET, "/api/v1/appointments/{id}").permitAll();
                             requests.requestMatchers

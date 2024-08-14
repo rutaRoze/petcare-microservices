@@ -5,6 +5,7 @@ import com.roze.appointment_service.exception.NotFoundException;
 import com.roze.appointment_service.exception.ServiceUnavailableException;
 import com.roze.appointment_service.feign.UserClient;
 import feign.FeignException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +18,8 @@ public class UserService {
     @Autowired
     private UserClient userClient;
 
-    @Retry(name = "userServiceRetry", fallbackMethod = "fallbackToRetrieveUserData")
+    @Retry(name = "userServiceRetry")
+    @CircuitBreaker(name = "userServiceCircuitBreaker", fallbackMethod = "fallbackToRetrieveUserData")
     public UserResponse getUserByIdOrThrow(Long userId) {
         log.info("Attempting to retrieve user with ID: {}", userId);
         try {

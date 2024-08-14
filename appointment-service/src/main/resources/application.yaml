@@ -20,16 +20,45 @@ spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
 
-  resilience4j.retry:
+resilience4j:
+  retry:
+    retry-aspect-order: 2
     instances:
       userServiceRetry:
         max-attempts: 3
-        wait-duration: 10s
+        wait-duration: 5s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
         ignore-exceptions:
           - com.roze.appointment_service.exception.NotFoundException
         retry-exceptions:
           - feign.RetryableException
           - java.net.UnknownHostException
+  circuitbreaker:
+    circuit-breaker-aspect-order: 1
+    instances:
+      userServiceCircuitBreaker:
+        register-health-indicator: true
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 5s
+        automatic-transition-from-open-to-half-open-enabled: true
+        permitted-number-of-calls-in-half-open-state: 3
+        minimum-number-of-calls: 3
+        event-consumer-buffer-size: 10
+        sliding-window-type: COUNT_BASED
+
+management:
+  health:
+    circuitbreakers:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
 
 server:
   port: 8082
