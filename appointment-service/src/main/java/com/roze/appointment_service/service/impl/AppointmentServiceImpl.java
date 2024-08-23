@@ -125,15 +125,26 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     public List<AppointmentResponse> findAllAppointments() {
 
-        List<AppointmentResponse> appointments = appointmentRepository.findAll()
-                .stream()
+        return appointmentRepository.findAll().stream()
                 .map(appointmentEntity -> appointmentMapper.entityToResponse(appointmentEntity,
                         userService.getUserByIdOrThrow(appointmentEntity.getVetId()),
                         userService.getUserByIdOrThrow(appointmentEntity.getOwnerId())))
                 .sorted(Comparator.comparing(AppointmentResponse::getAppointmentDateTime))
                 .toList();
+    }
 
-        return appointments;
+    @Override
+    public List<AppointmentResponse> findAppointmentsByVetNameAndSurname(String vetName, String vetSurname) {
+
+        List<AppointmentResponse> allAppointments = findAllAppointments();
+
+        return allAppointments.stream()
+                .filter(appointment ->
+                        (vetName == null || vetName.isBlank() ||
+                                appointment.getVetName().equalsIgnoreCase(vetName))
+                                && appointment.getVetSurname().equalsIgnoreCase(vetSurname))
+                .sorted(Comparator.comparing(AppointmentResponse::getAppointmentDateTime))
+                .toList();
     }
 
     private AppointmentEntity getAppointmentByIdOrThrow(Long appointmentId) {

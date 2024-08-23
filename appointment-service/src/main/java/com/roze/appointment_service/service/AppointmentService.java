@@ -15,4 +15,6 @@ public interface AppointmentService {
     void deleteAppointmentById(Long id);
 
     List<AppointmentResponse> findAllAppointments();
+
+    List<AppointmentResponse> findAppointmentsByVetNameAndSurname(String vetName, String vetSurname);
 }

@@ -5,6 +5,7 @@ import com.roze.appointment_service.dto.response.AppointmentResponse;
 import com.roze.appointment_service.service.AppointmentService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -48,6 +50,15 @@ public class AppointmentController {
     public ResponseEntity<List<AppointmentResponse>> getAllAppointments() {
 
         return ResponseEntity.ok(appointmentService.findAllAppointments());
+    }
+
+    @GetMapping("/vet")
+    public ResponseEntity<List<AppointmentResponse>> getAppointmentsByVetNameAndSurname(
+            @RequestParam(required = false, name = "name") String vetName,
+            @RequestParam(name = "surname") @NotBlank String vetSurname
+    ) {
+
+        return ResponseEntity.ok(appointmentService.findAppointmentsByVetNameAndSurname(vetName, vetSurname));
     }
 
     @PutMapping("/{id}")
