@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @Validated
 @RequestMapping("api/v1/appointments")
@@ -40,6 +42,12 @@ public class AppointmentController {
         AppointmentResponse appointmentResponse = appointmentService.findAppointmentById(id);
 
         return ResponseEntity.ok(appointmentResponse);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<AppointmentResponse>> getAllAppointments() {
+
+        return ResponseEntity.ok(appointmentService.findAllAppointments());
     }
 
     @PutMapping("/{id}")
