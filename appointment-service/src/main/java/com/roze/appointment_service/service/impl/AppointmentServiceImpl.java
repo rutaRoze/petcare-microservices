@@ -19,6 +19,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
+import java.util.List;
+
 @Service
 @Slf4j
 public class AppointmentServiceImpl implements AppointmentService {
@@ -117,6 +120,31 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .createAppointmentEvent(EventType.CANCELED, response));
 
         appointmentRepository.deleteById(id);
+    }
+
+    @Override
+    public List<AppointmentResponse> findAllAppointments() {
+
+        return appointmentRepository.findAll().stream()
+                .map(appointmentEntity -> appointmentMapper.entityToResponse(appointmentEntity,
+                        userService.getUserByIdOrThrow(appointmentEntity.getVetId()),
+                        userService.getUserByIdOrThrow(appointmentEntity.getOwnerId())))
+                .sorted(Comparator.comparing(AppointmentResponse::getAppointmentDateTime))
+                .toList();
+    }
+
+    @Override
+    public List<AppointmentResponse> findAppointmentsByVetNameAndSurname(String vetName, String vetSurname) {
+
+        List<AppointmentResponse> allAppointments = findAllAppointments();
+
+        return allAppointments.stream()
+                .filter(appointment ->
+                        (vetName == null || vetName.isBlank() ||
+                                appointment.getVetName().equalsIgnoreCase(vetName))
+                                && appointment.getVetSurname().equalsIgnoreCase(vetSurname))
+                .sorted(Comparator.comparing(AppointmentResponse::getAppointmentDateTime))
+                .toList();
     }
 
     private AppointmentEntity getAppointmentByIdOrThrow(Long appointmentId) {
